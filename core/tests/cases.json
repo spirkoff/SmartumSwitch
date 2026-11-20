@@ -889,5 +889,70 @@
 "shown": "ТЗ",
 "layout": "ru",
 "fix": false
+},
+{
+"shown": "СрфеПЗЕ",
+"layout": "ru",
+"fix": true,
+"result": "ChatGPT"
+},
+{
+"shown": "пшерги",
+"layout": "ru",
+"fix": true,
+"result": "github"
+},
+{
+"shown": "ПшеРги",
+"layout": "ru",
+"fix": true,
+"result": "GitHub"
+},
+{
+"shown": "ЦрфеыФзз",
+"layout": "ru",
+"fix": true,
+"result": "WhatsApp"
+},
+{
+"shown": "chatgpt",
+"layout": "en",
+"fix": false
+},
+{
+"shown": ",bnhbrc",
+"layout": "en",
+"fix": true,
+"result": "битрикс"
+},
+{
+"shown": "ntktuhfv",
+"layout": "en",
+"fix": true,
+"result": "телеграм"
+},
+{
+"shown": "Ntktuhfv",
+"layout": "en",
+"fix": true,
+"result": "Телеграм"
+},
+{
+"shown": "cvfhnev",
+"layout": "en",
+"fix": true,
+"result": "смартум"
+},
+{
+"shown": "срфепзе",
+"layout": "ru",
+"fix": true,
+"result": "chatgpt"
+},
+{
+"shown": "ЫлуесрГз",
+"layout": "ru",
+"fix": true,
+"result": "SketchUp"
 }
 ]

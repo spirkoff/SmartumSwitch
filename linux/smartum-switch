@@ -19,6 +19,7 @@ from evdev import InputDevice, UInput, ecodes as E, list_devices
 HOME = os.path.expanduser("~")
 CFG = os.path.join(HOME, ".config/smartum-switch")
 EXC_FILE = os.path.join(CFG, "exceptions.txt")
+WORDS_FILE = os.path.join(CFG, "words.txt")
 STATE_FILE = os.path.join(CFG, "auto-enabled")
 CACHE = os.path.join(HOME, ".cache/smartum-switch")
 LOG = os.path.join(HOME, ".cache/smartum-switch.log")
@@ -118,11 +119,49 @@ SHORT = {"ru": {"не", "на", "по", "за", "из", "от", "до", "то", 
          "en": {"to", "in", "is", "it", "of", "on", "at", "we", "he", "me", "my", "no", "so", "do", "be", "an", "or",
                 "up", "us", "am", "if", "go", "as", "by", "oh", "ok", "hi"}}
 
+# Brands and IT terms missing from hunspell (keep in sync with core/data/rules.json "known_words").
+# They count as valid words: "СрфеПЗЕ" -> "ChatGPT". Users add their own in ~/.config/smartum-switch/words.txt.
+KNOWN = {"en": {
+        "acer", "airpods", "aliexpress", "amazon", "amnezia", "android", "appimage", "apple", "asus", "autocad",
+        "avito", "bash", "bitrix", "blender", "bluetooth", "canva", "chatgpt", "chrome", "chromium", "claude",
+        "codex", "copilot", "cursor", "debian", "deepseek", "discord", "docker", "dropbox", "electron", "excel",
+        "facebook", "fedora", "figma", "firefox", "flatpak", "geforce", "gemini", "github", "gitlab", "gmail",
+        "gnome", "google", "grok", "hdmi", "hotmail", "html", "huawei", "icloud", "illustrator", "instagram",
+        "intel", "ipad", "ipados", "iphone", "javascript", "jira", "json", "lenovo", "linkedin", "linux", "logitech",
+        "macbook", "macos", "mailru", "meta", "midjourney", "nodejs", "notion", "nvidia", "nvme", "onedrive",
+        "openai", "openvpn", "outlook", "ozon", "pantheon", "perplexity", "photoshop", "powerpoint", "punto",
+        "python", "radeon", "ryzen", "safari", "samsung", "sketchup", "skype", "slack", "smartum", "smartumos",
+        "smartumswitch", "steam", "systemd", "telegram", "threads", "tiktok", "trello", "twitter", "typescript",
+        "ubuntu", "uinput", "viber", "wayland", "whatsapp", "wifi", "wildberries", "windows", "wine", "wireguard",
+        "xiaomi", "xorg", "yandex", "ydotool", "youtube", "zoom"},
+         "ru": {
+        "авито", "айпад", "айфон", "андроид", "битрикс", "блендер", "вайбер", "вайлдберриз", "ватсап", "виндовс",
+        "вконтакте", "вотсап", "гитхаб", "гугл", "канва", "кодекс", "линукс", "макбук", "озон", "самсунг", "скетчап",
+        "смартум", "сяоми", "телеграм", "телеграмм", "убунту", "фигма", "хуавей", "чатгпт", "эппл", "ютуб", "яндекс"}}
+
 class Judge:
     def __init__(self):
         self.sp = Speller()
         self.bg = load_bigrams()
         self.exc = set(); self.exc_mtime = None
+        self.words = {"en": set(), "ru": set()}; self.words_mtime = None
+    def user_words(self):
+        try:
+            m = os.path.getmtime(WORDS_FILE)
+        except OSError:
+            self.words = {"en": set(), "ru": set()}; return self.words
+        if m != self.words_mtime:
+            self.words_mtime = m
+            w = {"en": set(), "ru": set()}
+            for l in open(WORDS_FILE, encoding="utf-8"):
+                l = l.strip().lower()
+                if l and not l.startswith("#"):
+                    w["ru" if re.search(r"[а-яё]", l) else "en"].add(l)
+            self.words = w
+        return self.words
+    def valid(self, lay, w):
+        lw = w.lower()
+        return self.sp.ok(lay, w) or lw in KNOWN[lay] or lw in self.user_words()[lay]
     def exceptions(self):
         try:
             m = os.path.getmtime(EXC_FILE)
@@ -150,11 +189,11 @@ class Judge:
             return False, "short"
         if not all(map(is_letter, o)):
             return False, "punct"
-        if d and self.sp.ok(L, d):
+        if d and self.valid(L, d):
             return False, "valid"
         if no == 2:
             return (o.lower() in SHORT[O] and d.lower() not in SHORT[L]), "short2"
-        if self.sp.ok(O, o):
+        if self.valid(O, o):
             return True, "dict"
         if no >= 4 and d and all(map(is_letter, d)):
             sd = self.score(d, L); so = self.score(o, O)
@@ -259,6 +298,10 @@ class Daemon:
             open(EXC_FILE, "w", encoding="utf-8").write(
                 "# Слова, которые SmartumSwitch никогда не исправляет (по одному в строке, любой регистр).\n"
                 "# Можно писать в любом виде: как набрано или как было бы после исправления.\n")
+        if not os.path.exists(WORDS_FILE):
+            open(WORDS_FILE, "w", encoding="utf-8").write(
+                "# Слова, которые SmartumSwitch считает правильными (бренды, имена, термины), по одному в строке.\n"
+                "# Пример: если набрать chatgpt в русской раскладке (срфезе), оно исправится на chatgpt.\n")
         self.enabled = open(STATE_FILE).read().strip() != "0" if os.path.exists(STATE_FILE) else True
         self.judge = Judge()
         self.sources = get_sources()

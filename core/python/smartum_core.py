@@ -40,11 +40,18 @@ class Speller:
         return bool(self.L.Hunspell_spell(self.h[lay], w.encode()))
 
 class Judge:
-    def __init__(self, exceptions=()):
+    def __init__(self, exceptions=(), words=()):
         self.sp = Speller()
         self.bg = json.load(open(os.path.join(CORE, "data", "bigrams.json"), encoding="utf-8"))
         self.short = {k: set(v) for k, v in RULES["short_words"].items()}
         self.exc = {w.lower() for w in exceptions}
+        self.known = {k: set(v) for k, v in RULES["known_words"].items() if not k.startswith("_")}
+        for w in words:  # user words (words.txt): valid in the layout of their letters
+            w = w.strip().lower()
+            if w:
+                self.known["ru" if re.search(r"[а-яё]", w) else "en"].add(w)
+    def valid(self, lay, w):
+        return self.sp.ok(lay, w) or w.lower() in self.known[lay]
     def score(self, w, lay):
         b = self.bg[lay]; tot = b["tot"]; c = b["c"]; sm = RULES["bigram_smoothing"]
         w = "^" + w.lower() + "$"
@@ -59,11 +66,11 @@ class Judge:
             return False, "short"
         if not all(map(is_letter, o)):
             return False, "punct"
-        if d and self.sp.ok(L, d):
+        if d and self.valid(L, d):
             return False, "valid"
         if no == 2:
             return (o.lower() in self.short[O] and d.lower() not in self.short[L]), "short2"
-        if self.sp.ok(O, o):
+        if self.valid(O, o):
             return True, "dict"
         if no >= RULES["bigram_min_letters"] and d and all(map(is_letter, d)):
             sd = self.score(d, L); so = self.score(o, O)

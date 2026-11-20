@@ -28,4 +28,8 @@ if os.path.exists(linux):
     src = open(linux, encoding="utf-8").read().split("# ---------- окружение")[0]
     ns = {"__name__": "smartum_linux"}; exec(src, ns)
     bad += run("linux-daemon", ns["Judge"]())
+    from smartum_core import RULES
+    for lay in ("en", "ru"):
+        if set(RULES["known_words"][lay]) != set(ns["KNOWN"][lay]):
+            bad += 1; print(f"  FAIL known_words[{lay}] differ between core/data/rules.json and linux/smartum-switch")
 sys.exit(1 if bad else 0)

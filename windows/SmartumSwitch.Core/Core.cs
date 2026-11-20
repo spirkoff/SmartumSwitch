@@ -103,7 +103,23 @@ public sealed class Judge
         otherMinMin = R.GetProperty("bigram_other_min_min").GetDouble(); smooth = R.GetProperty("bigram_smoothing").GetDouble();
         foreach (var p in R.GetProperty("short_words").EnumerateObject())
             shortWords[p.Name] = p.Value.EnumerateArray().Select(e => e.GetString()!).ToHashSet();
+        foreach (var p in R.GetProperty("known_words").EnumerateObject())
+            if (!p.Name.StartsWith("_"))
+                knownWords[p.Name] = p.Value.EnumerateArray().Select(e => e.GetString()!).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
+
+    readonly Dictionary<string, HashSet<string>> knownWords = new();
+    /// <summary>User words (brands, names): valid in the layout of their letters.</summary>
+    public void AddWords(IEnumerable<string> words)
+    {
+        foreach (var raw in words)
+        {
+            var w = raw.Trim(); if (w.Length == 0 || w.StartsWith("#")) continue;
+            var lay = w.Any(ch => (ch >= 'а' && ch <= 'я') || (ch >= 'А' && ch <= 'Я') || ch == 'ё' || ch == 'Ё') ? "ru" : "en";
+            knownWords[lay].Add(w);
+        }
+    }
+    bool Known(string lay, string w) => Valid(lay, w) || (knownWords.TryGetValue(lay, out var k) && k.Contains(w));
 
     public bool Valid(string lay, string w) => dict[lay].Check(w);
 
@@ -126,9 +142,9 @@ public sealed class Judge
         int nd = d.Count(Text.IsLetter), no = o.Count(Text.IsLetter);
         if (no < minLetters || no < nd) return (false, "short");
         if (!o.All(Text.IsLetter)) return (false, "punct");
-        if (d.Length > 0 && Valid(L, d)) return (false, "valid");
+        if (d.Length > 0 && Known(L, d)) return (false, "valid");
         if (no == 2) return (shortWords[O].Contains(o.ToLowerInvariant()) && !shortWords[L].Contains(d.ToLowerInvariant()), "short2");
-        if (Valid(O, o)) return (true, "dict");
+        if (Known(O, o)) return (true, "dict");
         if (no >= bgMinLetters && d.Length > 0 && d.All(Text.IsLetter))
         {
             var sd = Score(d, L); var so = Score(o, O);
