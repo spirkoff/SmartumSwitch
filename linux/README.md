@@ -13,7 +13,8 @@
 - **Откат.** Нажмите Backspace сразу после исправления — вернётся как было, и это слово больше не тронем до конца сеанса.
 - **Pause** — исправить выделенный текст (или последнее слово, если ничего не выделено). Буфер обмена сохраняется.
 - **Shift+Pause** — включить/выключить автоисправление (с уведомлением). Или `smartum-switch toggle`.
-- **Исключения** — `~/.config/smartum-switch/exceptions.txt`, по одному слову в строке.
+- **Исключения** — `~/.config/smartum-switch/exceptions.txt`, по одному слову в строке: слова, которые программа никогда не исправляет.
+- **Свои слова** — `~/.config/smartum-switch/words.txt`, по одному в строке: слова, которых нет в словарях (названия, термины). Набранное в другой раскладке будет исправлено на них. Перечитывается на ходу. Больше 200 частых названий (ChatGPT, GitHub, Telegram…) уже встроены.
 - Осторожный: слова из 1 буквы не трогает, 2-буквенные — только частые (`yt` → `не`), проверяет по словарям
   hunspell (ru_RU, en_US) и по частотам буквосочетаний. Не работает в терминалах, окнах паролей и при зажатых Ctrl/Alt/Super.
 - **Приватность.** Нет рекламы и телеметрии: набранный текст нигде не сохраняется и никуда не отправляется. В журнале
@@ -71,7 +72,8 @@ layout (QWERTY ⇄ Russian ЙЦУКЕН) automatically while you type, or on the
 - **Undo:** press Backspace right after a correction.
 - **Pause:** fix the selection (or the last word). The clipboard is restored.
 - **Shift+Pause** or `smartum-switch toggle`: auto-correction on/off.
-- **Exceptions:** `~/.config/smartum-switch/exceptions.txt`, one word per line.
+- **Exceptions:** `~/.config/smartum-switch/exceptions.txt`, one word per line: words the program never corrects.
+- **Your words:** `~/.config/smartum-switch/words.txt`, one per line: names and terms missing from the dictionaries. Typed in the other layout, they are corrected to these words. Re-read on the fly. More than 200 common names (ChatGPT, GitHub, Telegram…) are already built in.
 - Conservative: hunspell dictionaries (ru_RU, en_US) plus letter-bigram statistics; skips terminals,
   password dialogs and Ctrl/Alt/Super shortcuts.
 - **Privacy:** no ads and no telemetry; typed text is never stored or sent anywhere; the log has counters and errors only.
