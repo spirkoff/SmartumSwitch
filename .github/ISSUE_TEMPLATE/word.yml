@@ -1,0 +1,31 @@
+name: Добавить слово в словарь (Add a word)
+description: Слова нет в словарях (a word is missing from the dictionaries)
+title: "Слово: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Можно сразу добавить слово себе в `~/.config/smartum-switch/words.txt`, по одному в строке. Файл перечитывается на ходу (you can add it now to ~/.config/smartum-switch/words.txt, one per line; re-read on the fly).
+  - type: input
+    id: word
+    attributes:
+      label: Слово в правильной раскладке (Word in the correct layout)
+      placeholder: ChatGPT
+    validations:
+      required: true
+  - type: input
+    id: other-layout
+    attributes:
+      label: Как выглядит в другой раскладке (Typed in the other layout)
+      description: То же слово, набранное в другой раскладке (the same word typed in the other layout)
+      placeholder: СрфеПЗЕ
+    validations:
+      required: true
+  - type: input
+    id: kind
+    attributes:
+      label: Что это (What it is)
+      description: Бренд, термин и т.п. (a brand, a term, etc.)
+      placeholder: бренд (brand)
+    validations:
+      required: true

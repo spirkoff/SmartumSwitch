@@ -1,5 +1,9 @@
 # SmartumSwitch
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/spirkoff/SmartumSwitch/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/spirkoff/SmartumSwitch)](https://github.com/spirkoff/SmartumSwitch/releases/latest)
+![platform: Linux | Wayland](https://img.shields.io/badge/platform-Linux%20%7C%20Wayland-blue)
+
 Свободный аналог Punto Switcher для Linux (Wayland): исправляет текст, набранный не в той раскладке
 (QWERTY ⇄ ЙЦУКЕН) — автоматически во время набора или по клавише Pause.
 Сделано в [smARTum](https://github.com/spirkoff) — мебель, Крым. Лицензия MIT. Полностью безвозмездно, без рекламы, без телеметрии и без установки посторонних программ.

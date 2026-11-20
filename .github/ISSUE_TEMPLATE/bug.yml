@@ -1,0 +1,68 @@
+name: Ошибка (Bug)
+description: Слово исправилось не так (a word was corrected wrongly)
+title: "Ошибка: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Опишите, что произошло. Не вставляйте пароли и личные данные (do not paste passwords or personal data).
+  - type: input
+    id: distro
+    attributes:
+      label: Дистрибутив и версия (Distribution and version)
+      placeholder: elementary OS 8
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Окружение и Wayland/X11 (Desktop and session)
+      description: GNOME, Pantheon и т.п., а также Wayland или X11 (GNOME, Pantheon, etc., and Wayland or X11)
+      placeholder: Pantheon, Wayland
+    validations:
+      required: true
+  - type: input
+    id: layouts
+    attributes:
+      label: Раскладки (Layouts)
+      placeholder: us, ru
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: Программа, в которой набирали (Application)
+      placeholder: Firefox
+    validations:
+      required: true
+  - type: textarea
+    id: typed
+    attributes:
+      label: Что набрали (What you typed)
+      placeholder: ghbdtn
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: Что получили (What you got)
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидали (What you expected)
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Журнал необязателен. Перед вставкой уберите пароли и личные данные (optional; strip passwords and personal data first).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Журнал (Logs)
+      description: Вывод `systemctl --user status smartum-switch` и последние строки `~/.cache/smartum-switch.log`. Не вставляйте пароли и личные данные (output of systemctl --user status and the last lines of the log; no passwords or personal data).
+      render: shell
+    validations:
+      required: false
