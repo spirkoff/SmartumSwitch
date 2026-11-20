@@ -1,0 +1,16 @@
+{
+  "_comment": "Decision thresholds shared by all platforms. See core/RULES.md.",
+  "min_letters": 2,
+  "bigram_min_letters": 4,
+  "bigram_avg_margin": 1.5,
+  "bigram_displayed_min_max": -9.0,
+  "bigram_other_min_min": -9.5,
+  "bigram_smoothing": 0.1,
+  "short_words": {
+    "ru": ["не","на","по","за","из","от","до","то","он","мы","вы","ты","да","но","же","ли","бы","ну","их","ей","им","со","во","ко","об","ни","уж","ой"],
+    "en": ["to","in","is","it","of","on","at","we","he","me","my","no","so","do","be","an","or","up","us","am","if","go","as","by","oh","ok","hi"]
+  },
+  "block_apps_linux": ["terminal","konsole","kitty","alacritty","tilix","xterm","keepass","bitwarden","1password","polkit","seahorse","pinentry","gcr-prompter"],
+  "block_apps_windows": ["windowsterminal","cmd","conhost","powershell","pwsh","putty","mintty","keepass","keepassxc","1password","bitwarden","credentialuibroker","logonui","consent"],
+  "block_titles": ["парол","password","passphrase","аутентиф","authenticat","unlock","разблок","sudo","pin-код","pin code"]
+}

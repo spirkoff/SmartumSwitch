@@ -1,0 +1,893 @@
+[
+{
+"shown": "ghbdtn",
+"layout": "en",
+"fix": true,
+"result": "привет"
+},
+{
+"shown": "vbh",
+"layout": "en",
+"fix": true,
+"result": "мир"
+},
+{
+"shown": "[dfnftn",
+"layout": "en",
+"fix": true,
+"result": "хватает"
+},
+{
+"shown": "GeynjCdbnxth?",
+"layout": "en",
+"fix": true,
+"result": "ПунтоСвитчер,"
+},
+{
+"shown": "cjplflbv",
+"layout": "en",
+"fix": true,
+"result": "создадим"
+},
+{
+"shown": "cdjq",
+"layout": "en",
+"fix": true,
+"result": "свой"
+},
+{
+"shown": "Jxtym",
+"layout": "en",
+"fix": true,
+"result": "Очень"
+},
+{
+"shown": "yt",
+"layout": "en",
+"fix": true,
+"result": "не"
+},
+{
+"shown": "yfv",
+"layout": "en",
+"fix": true,
+"result": "нам"
+},
+{
+"shown": "ntcn",
+"layout": "en",
+"fix": true,
+"result": "тест"
+},
+{
+"shown": "rjvgm.nth",
+"layout": "en",
+"fix": true,
+"result": "компьютер"
+},
+{
+"shown": "ghjuhfvvf",
+"layout": "en",
+"fix": true,
+"result": "программа"
+},
+{
+"shown": "rfr",
+"layout": "en",
+"fix": true,
+"result": "как"
+},
+{
+"shown": "ltkf?",
+"layout": "en",
+"fix": true,
+"result": "дела,"
+},
+{
+"shown": "Ghbdtn",
+"layout": "en",
+"fix": true,
+"result": "Привет"
+},
+{
+"shown": "ntrcn",
+"layout": "en",
+"fix": true,
+"result": "текст"
+},
+{
+"shown": "hf,jnf",
+"layout": "en",
+"fix": true,
+"result": "работа"
+},
+{
+"shown": "vfibyt",
+"layout": "en",
+"fix": true,
+"result": "машине"
+},
+{
+"shown": ";tkfntkmyj",
+"layout": "en",
+"fix": true,
+"result": "желательно"
+},
+{
+"shown": "rjvfyljq",
+"layout": "en",
+"fix": true,
+"result": "командой"
+},
+{
+"shown": "Irfa",
+"layout": "en",
+"fix": true,
+"result": "Шкаф"
+},
+{
+"shown": "ds,hfnm",
+"layout": "en",
+"fix": true,
+"result": "выбрать"
+},
+{
+"shown": "cltkfnm",
+"layout": "en",
+"fix": true,
+"result": "сделать"
+},
+{
+"shown": "Vjcrdf",
+"layout": "en",
+"fix": true,
+"result": "Москва"
+},
+{
+"shown": "руддщ",
+"layout": "ru",
+"fix": true,
+"result": "hello"
+},
+{
+"shown": "цщкдв",
+"layout": "ru",
+"fix": true,
+"result": "world"
+},
+{
+"shown": "ыщагтв",
+"layout": "ru",
+"fix": true,
+"result": "sofund"
+},
+{
+"shown": "пщщв",
+"layout": "ru",
+"fix": true,
+"result": "good"
+},
+{
+"shown": "еуые",
+"layout": "ru",
+"fix": true,
+"result": "test"
+},
+{
+"shown": "црфе",
+"layout": "ru",
+"fix": true,
+"result": "what"
+},
+{
+"shown": "ещ",
+"layout": "ru",
+"fix": true,
+"result": "to"
+},
+{
+"shown": "шы",
+"layout": "ru",
+"fix": true,
+"result": "is"
+},
+{
+"shown": "ьщтлун",
+"layout": "ru",
+"fix": true,
+"result": "monkey"
+},
+{
+"shown": "Ыьфкегь",
+"layout": "ru",
+"fix": true,
+"result": "Smartum"
+},
+{
+"shown": "ыцшеср",
+"layout": "ru",
+"fix": true,
+"result": "switch"
+},
+{
+"shown": "црфеы",
+"layout": "ru",
+"fix": true,
+"result": "whats"
+},
+{
+"shown": "Grok",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "SketchUp",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "OpenCore",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "ydotool",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "gsettings",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Wayland",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "punto",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "smartum",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "elementary",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Bitrix",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Amnezia",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "github",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "wifi",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "online",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "google",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "linux",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "hello",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "world",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "the",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "and",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "google.com",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "don't",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "vs",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "a",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "I",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "ok",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "iPad",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "macOS",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "hte",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "teh",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "recieve",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "adress",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Ubuntu",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Chrome",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Telegram",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "WhatsApp",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Avito",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Yandex",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Wildberries",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Ozon",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "youtube",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "instagram",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Bluetooth",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Netcraze",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Hopper",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Apacer",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Samsung",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Tornado",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Moskovskaya",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Alushta",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Maria",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Krym",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Simferopol",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Sevastopol",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Yalta",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Feodosia",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "vk",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "okay",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "lol",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "btw",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "thx",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "pls",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "asap",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "ETA",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "CRM",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "API",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "USB",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "HDMI",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "SSD",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "NVMe",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Basis",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Bazis",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Codex",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "ChatGPT",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Musk",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Ivan",
+"layout": "en",
+"fix": false
+},
+{
+"shown": "Битрикс",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "смартум",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Олег",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Тарханкут",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Алушта",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Ленинградская",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ютуб",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "гугл",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "линукс",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "коннектор",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "замер",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "привет",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "мир",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "шт",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "я",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "в",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "и",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "не",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "кухня",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "шкаф",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Мастер-Крым",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "привте",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "сдлеать",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "щас",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "чё",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ваще",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "спс",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "пжлст",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "норм",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ок",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Симферополь",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Севастополь",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Ялта",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Феодосия",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Саки",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Евпатория",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Иваненко",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "КрымАкрил",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Дельфин",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Мария",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Иван",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Петров",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Маск",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ЛДСП",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "МДФ",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "фасад",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "столешница",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "кромка",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "распил",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "присадка",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Блюм",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Хеттих",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "Базис",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "СкетчАп",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ВК",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ИП",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ООО",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "КП",
+"layout": "ru",
+"fix": false
+},
+{
+"shown": "ТЗ",
+"layout": "ru",
+"fix": false
+}
+]

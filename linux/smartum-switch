@@ -1,0 +1,799 @@
+#!/usr/bin/env python3
+# SmartumSwitch — open-source keyboard layout switcher for Linux/Wayland (QWERTY <-> ЙЦУКЕН).
+# Like Punto Switcher: fixes words typed in the wrong layout, automatically or on a hotkey.
+# Copyright (c) 2026 smARTum. MIT License.
+#
+#   smartum-switch            fix the selection (or the last word) — bind this to a hotkey (Pause)
+#   smartum-switch daemon     auto-correction while typing (run as a systemd user service)
+#   smartum-switch toggle     turn auto-correction on/off (also: Shift+Pause)
+#   smartum-switch status
+#
+# The daemon reads physical keyboards via evdev (no grab while you type), keeps the current
+# word as scan codes, and on Space decides (hunspell dictionaries + letter bigrams) whether the
+# word was typed in the wrong layout. If clearly so, it erases the word through its own uinput
+# keyboard, switches the layout and replays the same keys. Backspace right after a fix undoes it.
+# PRIVACY: typed text is never written anywhere; the log contains only counters and errors.
+import os, sys, time, re, math, json, select, subprocess, ctypes, signal, collections
+from evdev import InputDevice, UInput, ecodes as E, list_devices
+
+HOME = os.path.expanduser("~")
+CFG = os.path.join(HOME, ".config/smartum-switch")
+EXC_FILE = os.path.join(CFG, "exceptions.txt")
+STATE_FILE = os.path.join(CFG, "auto-enabled")
+CACHE = os.path.join(HOME, ".cache/smartum-switch")
+LOG = os.path.join(HOME, ".cache/smartum-switch.log")
+TOGGLE_STAMP = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "smartum-switch-toggle")
+TEST_DEV = None
+if "--test-device" in sys.argv:
+    TEST_DEV = sys.argv[sys.argv.index("--test-device") + 1]
+MY_PREFIXES = ("smartum-switch", "smartum-punto")
+LAYOUT_DELAY = 0.20
+KEY_GAP = 0.004
+
+def dbg(msg):
+    if TEST_DEV:
+        print(time.strftime("%H:%M:%S ") + msg, file=sys.stderr, flush=True)
+
+def log(msg):
+    try:
+        with open(LOG, "a") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
+    except Exception:
+        pass
+
+# ---------- раскладки ----------
+KEYS = [E.KEY_GRAVE, E.KEY_Q, E.KEY_W, E.KEY_E, E.KEY_R, E.KEY_T, E.KEY_Y, E.KEY_U, E.KEY_I, E.KEY_O, E.KEY_P,
+        E.KEY_LEFTBRACE, E.KEY_RIGHTBRACE, E.KEY_A, E.KEY_S, E.KEY_D, E.KEY_F, E.KEY_G, E.KEY_H, E.KEY_J,
+        E.KEY_K, E.KEY_L, E.KEY_SEMICOLON, E.KEY_APOSTROPHE, E.KEY_Z, E.KEY_X, E.KEY_C, E.KEY_V, E.KEY_B,
+        E.KEY_N, E.KEY_M, E.KEY_COMMA, E.KEY_DOT, E.KEY_SLASH]
+EN_L = "`qwertyuiop[]asdfghjkl;'zxcvbnm,./"
+EN_U = "~QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?"
+RU_L = "ёйцукенгшщзхъфывапролджэячсмитьбю."
+RU_U = "ЁЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,"
+CH = {"en": {k: (EN_L[i], EN_U[i]) for i, k in enumerate(KEYS)},
+      "ru": {k: (RU_L[i], RU_U[i]) for i, k in enumerate(KEYS)}}
+MAPPED = set(KEYS)
+OTHER = {"en": "ru", "ru": "en"}
+XKB = {"us": "en", "ru": "ru"}
+SHIFTS = {E.KEY_LEFTSHIFT, E.KEY_RIGHTSHIFT}
+CTRLS = {E.KEY_LEFTCTRL, E.KEY_RIGHTCTRL}
+ALTS = {E.KEY_LEFTALT, E.KEY_RIGHTALT}
+METAS = {E.KEY_LEFTMETA, E.KEY_RIGHTMETA}
+MODS = SHIFTS | CTRLS | ALTS | METAS
+DIRTY = {E.KEY_1, E.KEY_2, E.KEY_3, E.KEY_4, E.KEY_5, E.KEY_6, E.KEY_7, E.KEY_8, E.KEY_9, E.KEY_0,
+         E.KEY_MINUS, E.KEY_EQUAL, E.KEY_BACKSLASH, E.KEY_102ND} | set(range(E.KEY_KP7, E.KEY_KPDOT + 1)) | {E.KEY_KPSLASH, E.KEY_KPASTERISK}
+LETTER = re.compile(r"[a-zA-Zа-яёА-ЯЁ]")
+
+def is_letter(c):
+    return bool(LETTER.fullmatch(c))
+
+def render(keys, lay, caps):
+    out = []
+    for code, sh in keys:
+        lo, up = CH[lay][code]
+        u = sh
+        if caps and is_letter(lo):
+            u = not u
+        out.append(up if u else lo)
+    return "".join(out)
+
+# ---------- словари ----------
+class Speller:
+    def __init__(self):
+        L = ctypes.CDLL("libhunspell-1.7.so.0")
+        L.Hunspell_create.restype = ctypes.c_void_p
+        L.Hunspell_create.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        L.Hunspell_spell.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.L = L
+        self.h = {"ru": L.Hunspell_create(b"/usr/share/hunspell/ru_RU.aff", b"/usr/share/hunspell/ru_RU.dic"),
+                  "en": L.Hunspell_create(b"/usr/share/hunspell/en_US.aff", b"/usr/share/hunspell/en_US.dic")}
+    def ok(self, lay, w):
+        return bool(self.L.Hunspell_spell(self.h[lay], w.encode()))
+
+def load_bigrams():
+    os.makedirs(CACHE, exist_ok=True)
+    p = os.path.join(CACHE, "bigrams.json")
+    try:
+        return json.load(open(p))
+    except Exception:
+        pass
+    res = {}
+    for lay, path, alpha in (("ru", "/usr/share/hunspell/ru_RU.dic", r"[а-яё]+"), ("en", "/usr/share/hunspell/en_US.dic", r"[a-z]+")):
+        c = collections.Counter()
+        for i, l in enumerate(open(path, encoding="utf-8", errors="ignore")):
+            if i == 0:
+                continue
+            w = l.split("/")[0].strip().lower()
+            if not w or not re.fullmatch(alpha, w):
+                continue
+            w = "^" + w + "$"
+            for a, b in zip(w, w[1:]):
+                c[a + b] += 1
+        res[lay] = {"tot": sum(c.values()), "c": dict(c)}
+    json.dump(res, open(p, "w"))
+    return res
+
+SHORT = {"ru": {"не", "на", "по", "за", "из", "от", "до", "то", "он", "мы", "вы", "ты", "да", "но", "же", "ли", "бы",
+                "ну", "их", "ей", "им", "со", "во", "ко", "об", "ни", "уж", "ой", "мне"},
+         "en": {"to", "in", "is", "it", "of", "on", "at", "we", "he", "me", "my", "no", "so", "do", "be", "an", "or",
+                "up", "us", "am", "if", "go", "as", "by", "oh", "ok", "hi"}}
+
+class Judge:
+    def __init__(self):
+        self.sp = Speller()
+        self.bg = load_bigrams()
+        self.exc = set(); self.exc_mtime = None
+    def exceptions(self):
+        try:
+            m = os.path.getmtime(EXC_FILE)
+        except OSError:
+            self.exc = set(); return self.exc
+        if m != self.exc_mtime:
+            self.exc_mtime = m
+            self.exc = {l.strip().lower() for l in open(EXC_FILE, encoding="utf-8") if l.strip() and not l.startswith("#")}
+        return self.exc
+    def score(self, w, lay):
+        b = self.bg[lay]; tot = b["tot"]; c = b["c"]
+        w = "^" + w.lower() + "$"
+        s = [math.log((c.get(x + y, 0) + 0.1) / tot) for x, y in zip(w, w[1:])]
+        return sum(s) / len(s), min(s)
+    @staticmethod
+    def core(s):
+        return re.sub(r"^[^a-zA-Zа-яёА-ЯЁ]+|[^a-zA-Zа-яёА-ЯЁ]+$", "", s)
+    def should_fix(self, disp, other, L, O):
+        d, o = self.core(disp), self.core(other)
+        exc = self.exceptions()
+        if d.lower() in exc or o.lower() in exc or disp.lower() in exc:
+            return False, "exception"
+        nd = sum(map(is_letter, d)); no = sum(map(is_letter, o))
+        if no < 2 or no < nd:
+            return False, "short"
+        if not all(map(is_letter, o)):
+            return False, "punct"
+        if d and self.sp.ok(L, d):
+            return False, "valid"
+        if no == 2:
+            return (o.lower() in SHORT[O] and d.lower() not in SHORT[L]), "short2"
+        if self.sp.ok(O, o):
+            return True, "dict"
+        if no >= 4 and d and all(map(is_letter, d)):
+            sd = self.score(d, L); so = self.score(o, O)
+            if so[0] - sd[0] >= 1.5 and sd[1] <= -9.0 and so[1] >= -9.5:
+                return True, "bigram"
+        return False, "unsure"
+
+# ---------- окружение ----------
+def run(cmd, timeout=2):
+    try:
+        return subprocess.run(cmd, capture_output=True, timeout=timeout)
+    except Exception as ex:
+        log(f"error: run {cmd[0]}: {ex}")
+        return None
+
+def focused():
+    r = run(["gdbus", "call", "--session", "--dest", "org.pantheon.gala", "--object-path",
+             "/org/pantheon/gala/DesktopInterface", "--method", "org.pantheon.gala.DesktopIntegration.GetWindows"])
+    if not r or r.returncode != 0:
+        # not Pantheon/Gala: the focused window is unknown, work without window checks
+        return {"uid": None, "app": "", "title": ""}
+    out = r.stdout.decode(errors="ignore")
+    for m in re.finditer(r"(\d+), \{([^{}]*)\}", out):
+        blk = m.group(2)
+        if "'has-focus': <true>" in blk:
+            g = lambda k: (re.search(r"'%s': <'([^']*)'>" % k, blk) or [None, ""])[1]
+            return {"uid": m.group(1), "app": (g("app-id") + " " + g("wm-class")).lower(), "title": g("title").lower()}
+    return None
+
+BLOCK_APPS = ("terminal", "konsole", "kitty", "alacritty", "tilix", "xterm", "keepass", "bitwarden", "1password",
+              "polkit", "seahorse", "pinentry", "gcr-prompter")
+BLOCK_TITLES = ("парол", "password", "passphrase", "аутентиф", "authenticat", "unlock", "разблок", "sudo", "pin-код", "pin code")
+
+def window_allowed(w):
+    if not w:
+        return False
+    if TEST_DEV:
+        return "switch-test" in w["title"]
+    if w["uid"] is None and not w["title"]:
+        return True
+    if any(b in w["app"] for b in BLOCK_APPS):
+        return False
+    if any(b in w["title"] for b in BLOCK_TITLES):
+        return False
+    return True
+
+def find_session():
+    r = run(["loginctl", "list-sessions", "--no-legend"])
+    if not r:
+        return None
+    for line in r.stdout.decode().splitlines():
+        p = line.split()
+        if len(p) >= 4 and p[1] == str(os.getuid()) and p[3] == "seat0":
+            return p[0]
+    return None
+
+SESSION = None
+def session_active():
+    global SESSION
+    if not SESSION:
+        SESSION = find_session()
+        if not SESSION:
+            return False
+    r = run(["loginctl", "show-session", SESSION, "-p", "Active", "-p", "LockedHint"])
+    if not r or r.returncode != 0:
+        SESSION = None
+        return False
+    t = r.stdout.decode()
+    return "Active=yes" in t and "LockedHint=yes" not in t
+
+def get_sources():
+    r = run(["gsettings", "get", "org.gnome.desktop.input-sources", "sources"])
+    srcs = re.findall(r"\('xkb', '([^']+)'\)", r.stdout.decode() if r else "")
+    return [XKB.get(s.split("+")[0]) for s in srcs]
+
+def gs_current():
+    r = run(["gsettings", "get", "org.gnome.desktop.input-sources", "current"])
+    try:
+        return int(r.stdout.decode().split()[-1])
+    except Exception:
+        return -1
+
+def set_layout(lay, sources):
+    if lay not in sources:
+        return False
+    i = sources.index(lay)
+    if gs_current() == i and len(sources) > 1:
+        run(["gsettings", "set", "org.gnome.desktop.input-sources", "current", str((i + 1) % len(sources))])
+        time.sleep(0.05)
+    run(["gsettings", "set", "org.gnome.desktop.input-sources", "current", str(i)])
+    return True
+
+def notify(text):
+    subprocess.Popen(["notify-send", "-a", "SmartumSwitch", "-t", "2500", "SmartumSwitch", text],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+# ---------- демон ----------
+class Daemon:
+    def __init__(self):
+        os.makedirs(CFG, exist_ok=True)
+        if not os.path.exists(EXC_FILE):
+            open(EXC_FILE, "w", encoding="utf-8").write(
+                "# Слова, которые SmartumSwitch никогда не исправляет (по одному в строке, любой регистр).\n"
+                "# Можно писать в любом виде: как набрано или как было бы после исправления.\n")
+        self.enabled = open(STATE_FILE).read().strip() != "0" if os.path.exists(STATE_FILE) else True
+        self.judge = Judge()
+        self.sources = get_sources()
+        self.ui = UInput({E.EV_KEY: list(range(1, 249))}, name="smartum-switch-auto")
+        time.sleep(0.4)
+        self.kbds = {}; self.mice = {}; self.held = {}
+        self.layout = None
+        self.reset()
+        self.pending = None; self.rollback = None; self.last = None
+        self.session_ignore = set()
+        self.stats = collections.Counter()
+        self.last_stats = time.time()
+        self.mon = subprocess.Popen(["gsettings", "monitor", "org.gnome.desktop.input-sources", "current"],
+                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+        self.mon_buf = b""
+        self.sync_layout(force=True)
+        self.scan()
+        log(f"start enabled={self.enabled} test={bool(TEST_DEV)} kbds={len(self.kbds)} mice={len(self.mice)} sources={self.sources}")
+
+    def reset(self):
+        self.word = []; self.dirty = False; self.word_uid = None
+
+    def sync_layout(self, force=False):
+        cur = gs_current()
+        if 0 <= cur < len(self.sources):
+            if force and self.sources[cur]:
+                set_layout(self.sources[cur], self.sources)
+            self.layout = self.sources[cur]
+
+    def scan(self):
+        paths = set(list_devices())
+        for p in list(self.kbds) + list(self.mice):
+            if p not in paths:
+                self.drop(p)
+        for p in paths:
+            if p in self.kbds or p in self.mice:
+                continue
+            try:
+                d = InputDevice(p)
+            except Exception:
+                continue
+            name = d.name or ""
+            if name.startswith(MY_PREFIXES) or "ydotool" in name.lower():
+                d.close(); continue
+            if TEST_DEV and name != TEST_DEV:
+                d.close(); continue
+            keys = d.capabilities().get(E.EV_KEY, [])
+            if E.KEY_A in keys and E.KEY_SPACE in keys and E.KEY_Z in keys:
+                self.kbds[p] = d; self.held[p] = set(); dbg(f"keyboard {name}")
+            elif not TEST_DEV and (E.BTN_LEFT in keys or E.BTN_TOUCH in keys):
+                self.mice[p] = d
+            else:
+                d.close()
+        self.last_scan = time.time()
+
+    def drop(self, p):
+        d = self.kbds.pop(p, None) or self.mice.pop(p, None)
+        self.held.pop(p, None)
+        try:
+            d.close()
+        except Exception:
+            pass
+
+    def held_any(self):
+        return any(self.held.values())
+
+    def mods(self):
+        h = set().union(*self.held.values()) if self.held else set()
+        return h & SHIFTS, h & CTRLS, h & ALTS, h & METAS
+
+    def caps(self):
+        for d in self.kbds.values():
+            try:
+                if E.LED_CAPSL in d.leds():
+                    return True
+            except Exception:
+                pass
+        return False
+
+    # ----- обработка нажатий -----
+    def on_key(self, code, val):
+        if val != 1:
+            if val == 2 and code == E.KEY_BACKSPACE:
+                self.reset(); self.last = None
+            return
+        sh, ct, al, me = self.mods()
+        if code == E.KEY_PAUSE:
+            self.reset(); self.last = None; self.pending = None
+            if sh:
+                self.toggle()
+            return
+        if code in MODS:
+            if (code in SHIFTS and al) or (code in ALTS and sh):
+                if not ct and not me and self.layout:
+                    self.layout = OTHER[self.layout]  # Alt+Shift (xkb)
+                self.reset(); self.pending = None; self.last = None
+            return
+        if ct or al or me:
+            self.reset(); self.pending = None; self.last = None
+            return
+        if not self.enabled:
+            return
+        if self.rollback is not None:
+            self.rollback = None
+        if self.pending is not None:
+            if (code in MAPPED or code == E.KEY_SPACE) and len(self.pending["tail"]) < 16:
+                self.pending["tail"].append((code, bool(sh)))
+            else:
+                dbg(f"pending dropped: tail={len(self.pending['tail'])} code={code}")
+                self.pending = None; self.stats["skip_busy"] += 1
+                self.reset()
+            return
+        if self.last is not None:
+            last, self.last = self.last, None
+            if code == E.KEY_BACKSPACE:
+                self.rollback = last
+                return
+        if code in MAPPED:
+            if not self.word:
+                w = focused(); self.word_uid = w["uid"] if w else None
+            self.word.append((code, bool(sh)))
+        elif code == E.KEY_SPACE:
+            if self.word and not self.dirty and self.layout:
+                self.pending = {"keys": self.word, "layout": self.layout, "uid": self.word_uid, "tail": [], "t": time.time()}
+            self.reset()
+        elif code == E.KEY_BACKSPACE:
+            if self.word:
+                self.word.pop()
+            else:
+                self.dirty = True
+        elif code in DIRTY:
+            self.dirty = True  # цифры и прочие знаки: это слово не трогаем
+        elif code == E.KEY_CAPSLOCK:
+            pass
+        else:
+            self.reset()
+
+    def toggle(self):
+        self.enabled = not self.enabled
+        open(STATE_FILE, "w").write("1" if self.enabled else "0")
+        try:
+            open(TOGGLE_STAMP, "w").write(str(time.time()))
+        except Exception:
+            pass
+        notify("Автоисправление раскладки: " + ("ВКЛЮЧЕНО" if self.enabled else "ВЫКЛЮЧЕНО"))
+        log(f"toggle enabled={self.enabled}")
+
+    # ----- инъекция -----
+    def tap(self, code, shift=False):
+        u = self.ui
+        if shift:
+            u.write(E.EV_KEY, E.KEY_LEFTSHIFT, 1); u.syn(); time.sleep(KEY_GAP)
+        u.write(E.EV_KEY, code, 1); u.syn(); time.sleep(KEY_GAP)
+        u.write(E.EV_KEY, code, 0); u.syn(); time.sleep(KEY_GAP)
+        if shift:
+            u.write(E.EV_KEY, E.KEY_LEFTSHIFT, 0); u.syn(); time.sleep(KEY_GAP)
+
+    def grab(self):
+        got = []
+        try:
+            for d in self.kbds.values():
+                d.grab(); got.append(d)
+            return got
+        except Exception as ex:
+            for d in got:
+                try: d.ungrab()
+                except Exception: pass
+            log(f"error: grab {ex}")
+            return None
+
+    def release(self, grabbed):
+        # пересылаем всё, что пришло во время работы, и отпускаем клавиатуры, когда ничего не зажато
+        t0 = time.time(); quiet = time.time()
+        while True:
+            fds = {d.fd: (p, d) for p, d in self.kbds.items()}
+            r, _, _ = select.select(list(fds), [], [], 0.02)
+            for fd in r:
+                p, d = fds[fd]
+                try:
+                    evs = list(d.read())
+                except (BlockingIOError, OSError):
+                    continue
+                for ev in evs:
+                    if ev.type == E.EV_KEY:
+                        self.ui.write(E.EV_KEY, ev.code, ev.value); self.ui.syn()
+                        time.sleep(0.01)  # не отдаём пачкой — иначе приложение может перемешать
+                        self.track(p, ev)
+                quiet = time.time()
+            # отпускаем, только когда ничего не зажато и рабочий стол успел обработать
+            # наши нажатия (иначе он может перемешать их с живыми)
+            if not self.held_any() and (time.time() - quiet > 0.12 or time.time() - t0 > 1.0):
+                break
+            if time.time() - t0 > 5.0:
+                log("error: release timeout"); break
+        for d in grabbed:
+            try: d.ungrab()
+            except Exception: pass
+
+    def track(self, p, ev):
+        h = self.held.setdefault(p, set())
+        if ev.value == 1:
+            h.add(ev.code)
+        elif ev.value == 0:
+            h.discard(ev.code)
+        self.on_key(ev.code, ev.value)
+
+    def env_ok(self, uid):
+        w = focused()
+        dbg(f"env focus_uid={w and w['uid']} word_uid={uid}")
+        if not window_allowed(w):
+            self.stats["skip_window"] += 1; return False
+        if uid and w["uid"] and w["uid"] != uid:
+            self.stats["skip_focus_changed"] += 1; return False
+        if not TEST_DEV and not session_active():
+            self.stats["skip_session"] += 1; return False
+        return True
+
+    def drain(self, before=None):
+        """Read queued key events. Events older than `before` (or all, if None) were already
+        delivered to the desktop and are processed as normal typing; newer ones are returned."""
+        later = []
+        for path, d in list(self.kbds.items()):
+            while True:
+                try:
+                    evs = list(d.read())
+                except BlockingIOError:
+                    break
+                except OSError:
+                    break
+                for ev in evs:
+                    if ev.type != E.EV_KEY:
+                        continue
+                    if before is None or ev.timestamp() < before:
+                        self.track(path, ev)
+                    else:
+                        later.append((path, ev))
+        return later
+
+    def begin(self, token, attr):
+        """Grab keyboards for an injection; returns (grabbed, later) or None to retry/skip."""
+        self.drain()
+        if getattr(self, attr) is not token or self.held_any():
+            return None
+        g = self.grab()
+        if g is None:
+            return None
+        tg = time.time()
+        later = self.drain(before=tg)
+        if getattr(self, attr) is not token or self.held_any():
+            dbg(f"begin aborted after grab held={self.held_any()}")
+            for d in g:
+                try: d.ungrab()
+                except Exception: pass
+            for path, ev in later:
+                self.ui.write(E.EV_KEY, ev.code, ev.value); self.ui.syn(); self.track(path, ev)
+            return None
+        return g, later
+
+    def finish(self, g, later):
+        for path, ev in later:
+            self.ui.write(E.EV_KEY, ev.code, ev.value); self.ui.syn(); time.sleep(0.01)
+            self.track(path, ev)
+        self.release(g)
+
+    def do_pending(self):
+        p = self.pending
+        if time.time() - p["t"] > 3.0:
+            self.pending = None; self.stats["skip_slow"] += 1; self.adopt_tail(p); return
+        L = p["layout"]; O = OTHER[L]
+        keys = p["keys"]
+        fix = False; why = ""
+        if O in self.sources and tuple(keys) not in self.session_ignore:
+            caps = self.caps()
+            disp = render(keys, L, caps); other = render(keys, O, caps)
+            fix, why = self.judge.should_fix(disp, other, L, O)
+            del disp, other
+            self.stats["checked"] += 1
+            dbg(f"check len={len(keys)} layout={L} fix={fix} why={why}")
+        if not fix or not self.env_ok(p["uid"]):
+            self.pending = None; self.adopt_tail(p); return
+        r = self.begin(p, "pending")
+        if r is None:
+            return  # пользователь ещё печатает — повторим, когда всё отпущено
+        g, later = r
+        self.pending = None
+        tail = p["tail"]
+        dbg(f"inject word={len(keys)} tail={[ (c,v) for c,v in tail]} later={[(ev.code, ev.value) for _, ev in later]}")
+        try:
+            for _ in range(len(keys) + 1 + len(tail)):
+                self.tap(E.KEY_BACKSPACE)
+            set_layout(O, self.sources); self.layout = O
+            time.sleep(LAYOUT_DELAY)
+            for c, s in keys:
+                self.tap(c, s)
+            self.tap(E.KEY_SPACE)
+            for c, s in tail:
+                self.tap(c, s)
+            self.stats["fixed_" + why] += 1
+        finally:
+            self.reset()
+            if tail:
+                self.adopt_tail(p); self.last = None
+            else:
+                self.last = {"keys": keys, "layout": L, "uid": p["uid"]}
+            self.finish(g, later)
+
+    def adopt_tail(self, p):
+        # исправления нет: набранное после пробела становится текущим словом
+        tail = p["tail"]
+        if not tail:
+            return
+        last_sp = max([i for i, (c, _) in enumerate(tail) if c == E.KEY_SPACE], default=-1)
+        self.word = list(tail[last_sp + 1:]); self.word_uid = p["uid"]; self.dirty = False
+
+    def do_rollback(self):
+        rb = self.rollback
+        if not self.env_ok(rb["uid"]):
+            self.rollback = None; return
+        r = self.begin(rb, "rollback")
+        if r is None:
+            if self.rollback is rb and not self.held_any():
+                pass
+            return
+        g, later = r
+        self.rollback = None
+        try:
+            for _ in range(len(rb["keys"])):
+                self.tap(E.KEY_BACKSPACE)
+            set_layout(rb["layout"], self.sources); self.layout = rb["layout"]
+            time.sleep(LAYOUT_DELAY)
+            for c, s in rb["keys"]:
+                self.tap(c, s)
+            self.tap(E.KEY_SPACE)
+            self.session_ignore.add(tuple(rb["keys"]))
+            self.stats["rollback"] += 1
+        finally:
+            self.reset(); self.last = None
+            self.finish(g, later)
+
+    def read_monitor(self):
+        try:
+            chunk = os.read(self.mon.stdout.fileno(), 4096)
+        except OSError:
+            chunk = b""
+        if not chunk:
+            return False
+        self.mon_buf += chunk
+        while b"\n" in self.mon_buf:
+            line, self.mon_buf = self.mon_buf.split(b"\n", 1)
+            m = re.search(rb"current: uint32 (\d+)", line)
+            if m:
+                i = int(m.group(1))
+                if i < len(self.sources):
+                    self.layout = self.sources[i]
+        return True
+
+    def check_state(self):
+        try:
+            m = os.path.getmtime(STATE_FILE)
+        except OSError:
+            return
+        if m != getattr(self, "_state_m", None):
+            self._state_m = m
+            self.enabled = open(STATE_FILE).read().strip() != "0"
+
+    def loop(self):
+        while True:
+            self.check_state()
+            if time.time() - self.last_scan > 3:
+                self.scan()
+            fdmap = {}
+            for p, d in list(self.kbds.items()) + list(self.mice.items()):
+                fdmap[d.fd] = (p, d)
+            rl = list(fdmap) + [self.mon.stdout.fileno()]
+            r, _, _ = select.select(rl, [], [], 1.0)
+            for fd in r:
+                if fd == self.mon.stdout.fileno():
+                    if not self.read_monitor():
+                        self.mon = subprocess.Popen(["gsettings", "monitor", "org.gnome.desktop.input-sources", "current"],
+                                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+                    continue
+                p, d = fdmap[fd]
+                try:
+                    evs = list(d.read())
+                except BlockingIOError:
+                    continue
+                except OSError:
+                    self.drop(p); continue
+                for ev in evs:
+                    if ev.type != E.EV_KEY:
+                        continue
+                    if p in self.mice:
+                        if ev.value == 1:
+                            self.reset(); self.pending = None; self.last = None
+                        continue
+                    self.track(p, ev)
+            if not self.held_any():
+                try:
+                    if self.pending is not None:
+                        self.do_pending()
+                    elif self.rollback is not None:
+                        self.do_rollback()
+                except Exception as ex:
+                    log(f"error: {type(ex).__name__}: {ex}")
+            if self.pending is not None and time.time() - self.pending["t"] > 3.0:
+                p = self.pending; self.pending = None; self.stats["skip_slow"] += 1; self.adopt_tail(p)
+            if time.time() - self.last_stats > 600 and self.stats:
+                log("stats " + json.dumps(dict(self.stats))); self.stats.clear(); self.last_stats = time.time()
+
+    def stop(self, *a):
+        if self.stats:
+            log("stats " + json.dumps(dict(self.stats)))
+        log("stop")
+        for d in self.kbds.values():
+            try: d.ungrab()
+            except Exception: pass
+        sys.exit(0)
+
+
+# ---------- manual fix (hotkey) ----------
+def convert(text):
+    e2r = dict(zip(EN_L + EN_U + "@#$^&|", RU_L + RU_U + "\"№;:?/"))
+    r2e = {v: k for k, v in e2r.items()}
+    cyr = len(re.findall(r"[а-яёА-ЯЁ]", text)); lat = len(re.findall(r"[a-zA-Z]", text))
+    if cyr > lat:
+        return "".join(r2e.get(c, c) for c in text), "en"
+    return "".join(e2r.get(c, c) for c in text), "ru"
+
+SENTINEL = "\u2063smartum-switch-sentinel\u2063"
+
+def clip_save():
+    r = run(["wl-paste", "-l"])
+    if not r or r.returncode != 0:
+        return None
+    types = r.stdout.decode(errors="ignore").split()
+    pref = next((t for t in ("text/plain;charset=utf-8", "UTF8_STRING", "text/plain") if t in types), None)
+    pref = pref or next((t for t in types if t.startswith("image/")), None) or (types[0] if types else None)
+    if pref is None:
+        return None
+    d = run(["wl-paste", "-n", "-t", pref])
+    return (pref, d.stdout) if d and d.returncode == 0 else None
+
+def clip_set(data, mime="text/plain;charset=utf-8"):
+    subprocess.Popen(["wl-copy", "-t", mime], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL).communicate(data, timeout=2)
+
+def clip_text():
+    r = run(["wl-paste", "-n", "-t", "text/plain;charset=utf-8"])
+    if not r or r.returncode != 0:
+        r = run(["wl-paste", "-n"])
+    return r.stdout.decode(errors="replace") if r and r.returncode == 0 else ""
+
+def manual_fix():
+    time.sleep(0.12)
+    try:  # Shift+Pause is the daemon's on/off toggle — don't also run a fix
+        if time.time() - float(open(TOGGLE_STAMP).read()) < 1.0:
+            return
+    except Exception:
+        pass
+    w = focused() or {"app": "", "title": ""}
+    terminal = any(t in w["app"] for t in ("terminal", "konsole", "kitty", "alacritty", "tilix", "xterm"))
+    ui = UInput({E.EV_KEY: [E.KEY_LEFTCTRL, E.KEY_LEFTSHIFT, E.KEY_C, E.KEY_V, E.KEY_LEFT]}, name="smartum-switch-kbd")
+    time.sleep(0.35)
+    def combo(*keys):
+        for k in keys:
+            ui.write(E.EV_KEY, k, 1); ui.syn(); time.sleep(0.012)
+        for k in reversed(keys):
+            ui.write(E.EV_KEY, k, 0); ui.syn(); time.sleep(0.012)
+    def copy_sel():
+        clip_set(SENTINEL.encode()); time.sleep(0.08)
+        combo(E.KEY_LEFTCTRL, E.KEY_LEFTSHIFT, E.KEY_C) if terminal else combo(E.KEY_LEFTCTRL, E.KEY_C)
+        for _ in range(10):
+            time.sleep(0.04)
+            t = clip_text()
+            if t != SENTINEL:
+                return t
+        return None
+    saved = clip_save()
+    try:
+        text = copy_sel()
+        if not text and not terminal:
+            combo(E.KEY_LEFTCTRL, E.KEY_LEFTSHIFT, E.KEY_LEFT); time.sleep(0.05)
+            text = copy_sel()
+        if not text:
+            return
+        new, target = convert(text)
+        del text
+        clip_set(new.encode()); time.sleep(0.08)
+        if terminal:
+            subprocess.Popen(["notify-send", "-a", "SmartumSwitch", "SmartumSwitch",
+                              "Исправленный текст в буфере обмена / fixed text copied"])
+        else:
+            combo(E.KEY_LEFTCTRL, E.KEY_V)
+        time.sleep(0.35)
+        set_layout(target, get_sources())
+        log("manual fix ok")
+    except Exception as ex:
+        log(f"error: manual fix: {type(ex).__name__}")
+    finally:
+        time.sleep(0.15)
+        if saved:
+            clip_set(saved[1], saved[0])
+        else:
+            run(["wl-copy", "--clear"])
+        ui.close()
+
+def cli_toggle():
+    os.makedirs(CFG, exist_ok=True)
+    cur = open(STATE_FILE).read().strip() != "0" if os.path.exists(STATE_FILE) else True
+    open(STATE_FILE, "w").write("0" if cur else "1")
+    notify("Автоисправление раскладки: " + ("ВЫКЛЮЧЕНО" if cur else "ВКЛЮЧЕНО"))
+    print("auto-correction:", "off" if cur else "on")
+
+def cli_status():
+    on = open(STATE_FILE).read().strip() != "0" if os.path.exists(STATE_FILE) else True
+    print("auto-correction:", "on" if on else "off")
+    print("config:", CFG)
+    print("log:", LOG)
+
+if __name__ == "__main__":
+    os.makedirs(os.path.dirname(LOG), exist_ok=True)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    cmd = args[0] if args else "fix"
+    if TEST_DEV and cmd == TEST_DEV:
+        cmd = "daemon"
+    if cmd == "daemon":
+        d = Daemon()
+        signal.signal(signal.SIGTERM, d.stop)
+        signal.signal(signal.SIGINT, d.stop)
+        d.loop()
+    elif cmd == "toggle":
+        cli_toggle()
+    elif cmd == "status":
+        cli_status()
+    elif cmd == "fix":
+        manual_fix()
+    else:
+        print(__doc__ or "usage: smartum-switch [fix|daemon|toggle|status]")

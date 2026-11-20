@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SmartumSwitch.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WeCantSpell.Hunspell" Version="7.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\core\dict\ru_RU.aff" LogicalName="dict.ru_RU.aff" />
+    <EmbeddedResource Include="..\..\core\dict\ru_RU.dic" LogicalName="dict.ru_RU.dic" />
+    <EmbeddedResource Include="..\..\core\dict\en_US.aff" LogicalName="dict.en_US.aff" />
+    <EmbeddedResource Include="..\..\core\dict\en_US.dic" LogicalName="dict.en_US.dic" />
+    <EmbeddedResource Include="..\..\core\data\layout.json" LogicalName="data.layout.json" />
+    <EmbeddedResource Include="..\..\core\data\rules.json" LogicalName="data.rules.json" />
+    <EmbeddedResource Include="..\..\core\data\bigrams.json" LogicalName="data.bigrams.json" />
+  </ItemGroup>
+</Project>
