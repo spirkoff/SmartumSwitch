@@ -1,6 +1,6 @@
 # SmartumSwitch
 
-Свободный автопереключатель раскладки RU/EN. Исправляет текст, набранный не в той раскладке (QWERTY ⇄ ЙЦУКЕН), как Punto Switcher. Бесплатно для всех. Лицензия MIT. © 2026 smARTum.
+Свободный автопереключатель раскладки RU/EN. Исправляет текст, набранный не в той раскладке (QWERTY ⇄ ЙЦУКЕН), как Punto Switcher. Полностью безвозмездно, без рекламы, без телеметрии и без установки посторонних программ. Лицензия MIT. © 2026 smARTum.
 
 [English below](#english)
 
@@ -26,6 +26,19 @@ git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linu
 
 Нужны раскладки `us` и `ru`. Установщик ставит пакеты, правило udev и пользовательскую службу `smartum-switch`. Запускайте его обычным пользователем.
 
+## Зависимости (Linux)
+
+Установщик `linux/install.sh` ставит только пакеты, без которых программа не работает. Рекламу, телеметрию и посторонние программы он не ставит.
+
+- `python3-evdev` — читать нажатия клавиатуры и создать виртуальную клавиатуру (`uinput`), чтобы стереть слово и набрать его заново.
+- `libhunspell-1.7-0`, `hunspell-ru`, `hunspell-en-us` — словари, по которым программа отличает настоящее слово от набранного не в той раскладке.
+- `wl-clipboard` — для клавиши Pause: взять выделенный текст, исправить его и вернуть прежний буфер обмена.
+- `libnotify-bin` — короткое уведомление, когда автоисправление включают или выключают (Shift+Pause).
+
+Python 3 и systemd в таких системах обычно уже есть. Для горячей клавиши Pause на GNOME/Pantheon используется уже установленный `gsettings`. Отдельная программа вроде ydotool не нужна и не устанавливается: ввод идёт через `uinput`.
+
+Версия для Windows — один файл, без установщика и без прав администратора; посторонние программы она не ставит.
+
 ## Клавиши
 
 - **Pause** — исправить выделенный текст (если ничего не выделено — последнее слово). Буфер обмена сохраняется.
@@ -36,7 +49,7 @@ git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linu
 
 ## Приватность
 
-Набранный текст нигде не сохраняется и никуда не отправляется. Журнал (`~/.cache/smartum-switch.log` на Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` на Windows) содержит только счётчики и ошибки.
+Нет рекламы и телеметрии: набранный текст нигде не сохраняется и никуда не отправляется. Журнал (`~/.cache/smartum-switch.log` на Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` на Windows) содержит только счётчики и ошибки.
 
 ## Каталоги
 
@@ -54,7 +67,7 @@ git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linu
 python3 core/tests/run_tests.py
 ```
 
-Скрипт прогоняет `core/tests/cases.json` (171 слово) через эталонное ядро на Python и через `Judge` демона Linux. Демон подключается без устройств ввода: если модуля `evdev` нет, тест подставляет заглушку.
+Скрипт прогоняет `core/tests/cases.json` (182 слова) через эталонное ядро на Python и через `Judge` демона Linux. Демон подключается без устройств ввода: если модуля `evdev` нет, тест подставляет заглушку.
 
 Тесты Windows (нужен .NET 8 SDK):
 
@@ -74,7 +87,7 @@ MIT, © 2026 smARTum. Текст лицензии — в файле `LICENSE`.
 
 ## English
 
-SmartumSwitch is a free automatic RU/EN keyboard-layout switcher. It fixes text typed in the wrong layout (QWERTY ⇄ Russian ЙЦУКЕН), like Punto Switcher. Free for everyone. MIT License. © 2026 smARTum.
+SmartumSwitch is a free automatic RU/EN keyboard-layout switcher. It fixes text typed in the wrong layout (QWERTY ⇄ Russian ЙЦУКЕН), like Punto Switcher. Completely free of charge, with no ads, no telemetry and no bundled third-party software. MIT License. © 2026 smARTum.
 
 Made at smARTum — furniture, Crimea.
 
@@ -94,6 +107,20 @@ Uninstall: `git clone https://github.com/spirkoff/SmartumSwitch.git && cd Smartu
 
 You need the `us` and `ru` layouts. The installer adds packages, a udev rule and the `smartum-switch` user service. Run it as your normal user.
 
+
+### Dependencies (Linux)
+
+The `linux/install.sh` installer adds only the packages the program needs to run. It does not install ads, telemetry or any other third-party software.
+
+- `python3-evdev` — read key presses and create a virtual keyboard (`uinput`) to erase a word and type it again.
+- `libhunspell-1.7-0`, `hunspell-ru`, `hunspell-en-us` — dictionaries used to tell a real word from one typed in the wrong layout.
+- `wl-clipboard` — for the Pause key: read the selection, fix it and restore the previous clipboard.
+- `libnotify-bin` — a short notification when auto-correction is toggled (Shift+Pause).
+
+Python 3 and systemd are usually already present. On GNOME/Pantheon the Pause hotkey uses `gsettings`, which is already installed. A separate tool such as ydotool is not required and is not installed: input goes through `uinput`.
+
+The Windows build is a single file: no installer, no administrator rights, and no bundled third-party software.
+
 ### Hotkeys
 
 - **Pause** fixes the selection (or the last word, if nothing is selected). The clipboard is kept.
@@ -104,7 +131,7 @@ One-letter words are left alone. Two-letter words are fixed only when they are c
 
 ### Privacy
 
-Typed text is never stored or sent. The log (`~/.cache/smartum-switch.log` on Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` on Windows) has counters and errors only.
+No ads and no telemetry: typed text is never stored or sent. The log (`~/.cache/smartum-switch.log` on Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` on Windows) has counters and errors only.
 
 ### Folders
 
@@ -122,7 +149,7 @@ From the repository root:
 python3 core/tests/run_tests.py
 ```
 
-This runs `core/tests/cases.json` (171 words) against the Python reference core and against the Linux daemon's `Judge`. The daemon test does not need input devices: if the `evdev` module is missing, the runner stubs it.
+This runs `core/tests/cases.json` (182 words) against the Python reference core and against the Linux daemon's `Judge`. The daemon test does not need input devices: if the `evdev` module is missing, the runner stubs it.
 
 Windows tests (requires the .NET 8 SDK):
 

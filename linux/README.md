@@ -2,7 +2,7 @@
 
 Свободный аналог Punto Switcher для Linux (Wayland): исправляет текст, набранный не в той раскладке
 (QWERTY ⇄ ЙЦУКЕН) — автоматически во время набора или по клавише Pause.
-Сделано в [smARTum](https://github.com/spirkoff) — мебель, Крым. Лицензия MIT, бесплатно для всех.
+Сделано в [smARTum](https://github.com/spirkoff) — мебель, Крым. Лицензия MIT. Полностью безвозмездно, без рекламы, без телеметрии и без установки посторонних программ.
 
 [English below](#english)
 
@@ -16,7 +16,7 @@
 - **Исключения** — `~/.config/smartum-switch/exceptions.txt`, по одному слову в строке.
 - Осторожный: слова из 1 буквы не трогает, 2-буквенные — только частые (`yt` → `не`), проверяет по словарям
   hunspell (ru_RU, en_US) и по частотам буквосочетаний. Не работает в терминалах, окнах паролей и при зажатых Ctrl/Alt/Super.
-- **Приватность.** Набранный текст нигде не сохраняется и никуда не отправляется. В журнале
+- **Приватность.** Нет рекламы и телеметрии: набранный текст нигде не сохраняется и никуда не отправляется. В журнале
   (`~/.cache/smartum-switch.log`) только счётчики и ошибки.
 
 ## Установка
@@ -28,6 +28,19 @@ git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linu
 Проверено на elementary OS 8 (Pantheon/Gala, Wayland, раскладки `us` + `ru`). Должно работать в других окружениях
 на базе GNOME-настроек; определение окна (терминал/пароль) сейчас реализовано для Gala.
 Удаление: `git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./uninstall.sh`.
+
+## Зависимости
+
+Установщик `install.sh` ставит только пакеты, без которых программа не работает. Рекламу, телеметрию и посторонние программы он не ставит.
+
+- `python3-evdev` — читать нажатия клавиатуры и создать виртуальную клавиатуру (`uinput`), чтобы стереть слово и набрать его заново.
+- `libhunspell-1.7-0`, `hunspell-ru`, `hunspell-en-us` — словари, по которым программа отличает настоящее слово от набранного не в той раскладке.
+- `wl-clipboard` — для клавиши Pause: взять выделенный текст, исправить его и вернуть прежний буфер обмена.
+- `libnotify-bin` — короткое уведомление, когда автоисправление включают или выключают (Shift+Pause).
+
+Python 3 и systemd обычно уже есть. Для горячей клавиши Pause на GNOME/Pantheon используется уже установленный `gsettings`. Отдельная программа вроде ydotool не нужна и не устанавливается: ввод идёт через `uinput`.
+
+
 
 ## Как это устроено
 
@@ -52,7 +65,7 @@ git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linu
 ## English
 
 SmartumSwitch is a free Punto Switcher–style tool for Linux/Wayland. It fixes text typed in the wrong keyboard
-layout (QWERTY ⇄ Russian ЙЦУКЕН) automatically while you type, or on the Pause key.
+layout (QWERTY ⇄ Russian ЙЦУКЕН) automatically while you type, or on the Pause key. Completely free of charge, with no ads, no telemetry and no bundled third-party software.
 
 - **Auto-correction:** `ghbdtn ` becomes `привет `, `руддщ ` becomes `hello `, and the layout is switched for you.
 - **Undo:** press Backspace right after a correction.
@@ -61,10 +74,22 @@ layout (QWERTY ⇄ Russian ЙЦУКЕН) automatically while you type, or on the
 - **Exceptions:** `~/.config/smartum-switch/exceptions.txt`, one word per line.
 - Conservative: hunspell dictionaries (ru_RU, en_US) plus letter-bigram statistics; skips terminals,
   password dialogs and Ctrl/Alt/Super shortcuts.
-- **Privacy:** typed text is never stored or sent anywhere; the log has counters and errors only.
+- **Privacy:** no ads and no telemetry; typed text is never stored or sent anywhere; the log has counters and errors only.
 
 Install: `git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./install.sh`.
 Tested on elementary OS 8 (Wayland). Uninstall: `git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./uninstall.sh`.
+
+
+The installer adds only the packages the program needs. It does not install ads, telemetry or any other third-party software.
+
+- `python3-evdev` — read key presses and create a virtual keyboard (`uinput`) to erase a word and type it again.
+- `libhunspell-1.7-0`, `hunspell-ru`, `hunspell-en-us` — dictionaries used to tell a real word from one typed in the wrong layout.
+- `wl-clipboard` — for the Pause key: read the selection, fix it and restore the previous clipboard.
+- `libnotify-bin` — a short notification when auto-correction is toggled (Shift+Pause).
+
+Python 3 and systemd are usually already present. On GNOME/Pantheon the Pause hotkey uses `gsettings`, which is already installed. A separate tool such as ydotool is not required and is not installed: input goes through `uinput`.
+
+
 
 How it works: a systemd user service reads key presses via evdev (no grab while typing), keeps only the current
 word as scan codes in memory, and on Space checks it in both layouts. For a clear mistake it briefly grabs the
