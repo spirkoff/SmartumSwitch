@@ -105,12 +105,7 @@ dotnet run -c Release --project windows/SmartumSwitch.Tests
 
 - Картой или через СБП: [CloudTips](https://pay.cloudtips.ru/p/463a2f58)
 - Через [Boosty](https://boosty.to/smartum/donate)
-- **USDT, сеть TRC20 (Tron)**: `TWtdcQw8G2RX26DGrfRouX4nQs7RHvwmL6`
-- **LTC (Litecoin)**: `ltc1qczvt2cjewrf8a5lapt9lwejlkp993r0wwzrjw0`
-- **BTC (Bitcoin)**: `16Mo7J78izjDfu5PeuNtvdgQSzjvqvLaWP`
-- **ETH (Ethereum)**: `0xe1326f053413f7b5215f31009659cA938E67e73c`
-
-⚠️ Каждую монету отправляйте только в её сети, иначе средства потеряются.
+- Поддержать криптовалютой — по запросу в Telegram [@spirkoff_roman](https://t.me/spirkoff_roman)
 
 Получатель: Роман Спирьков (физическое лицо).
 
