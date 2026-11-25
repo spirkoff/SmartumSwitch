@@ -5,3 +5,17 @@ dist/
 __pycache__/
 *.pyc
 plan-*.md
+
+# macOS build output and local signing material
+macos/_app/
+macos/_obj/
+*.p12
+*.pem
+*.key
+*.cer
+*.crt
+*.keychain-db
+keychain.pass
+p12.pass
+._*
+.DS_Store

@@ -18,7 +18,22 @@ SmartumSwitch автоматически исправляет слово, наб
 
 - **Linux (Wayland) готов.** Проверено на elementary OS 8 (Pantheon/Gala, раскладки `us` + `ru`). Служба пользователя systemd, evdev и uinput. Подробности: `linux/README.md`.
 - **Windows — бета** (MVP 0.2, один файл `SmartumSwitch-win-x64.exe` для Windows 10/11 x64). На реальном оборудовании ещё не проверялась. Подробности: `windows/README.md`.
-- **macOS запланирована.** Общие правила ядра уже описаны для Linux, Windows и macOS (`core/RULES.md`); каталога macOS в этом выпуске нет.
+- **macOS 0.1.2** — готовое приложение для Intel, macOS 13 и новее. На Apple Silicon через Rosetta не проверялось. Подробности — в разделе ниже и в `macos/README.md`.
+
+## macOS
+
+Готовое приложение версии 0.1.2 для Intel (x86_64), macOS 13 и новее: [скачать](https://github.com/spirkoff/SmartumSwitch/releases/tag/macos-v0.1.2). Сборка для Intel; на Apple Silicon работа через Rosetta не проверялась. Подписано локальным самоподписанным сертификатом, Apple приложение не нотаризовала.
+
+Распакуйте архив и перенесите `SmartumSwitch.app` в «Программы». При первом запуске, так как приложение не нотаризовано, откройте его через правую кнопку → «Открыть» или «Системные настройки → Конфиденциальность и безопасность → Всё равно открыть».
+
+Нужны два разрешения: «Универсальный доступ» и «Мониторинг ввода». Нужны раскладки «Английская» (U.S. или ABC) и «Русская» (лучше «Русская — ПК»).
+
+- **Pause** (на части клавиатур приходит как F15) — исправить выделенный текст или последнее слово, если ничего не выделено.
+- **Shift+Pause** — включить или выключить автоисправление.
+
+Значок «S·» в строке меню означает, что автоисправление выключено или не выдано разрешение. Когда автоисправление работает, значок — «S».
+
+Сборка из исходников описана в `macos/README.md`.
 
 ## Быстрый старт (Linux)
 
@@ -53,7 +68,7 @@ Python 3 и systemd в таких системах обычно уже есть.
 
 ## Приватность
 
-Нет рекламы и телеметрии: набранный текст нигде не сохраняется и никуда не отправляется. Журнал (`~/.cache/smartum-switch.log` на Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` на Windows) содержит только счётчики и ошибки.
+Нет рекламы и телеметрии: набранный текст нигде не сохраняется и никуда не отправляется. Журнал (`~/.cache/smartum-switch.log` на Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` на Windows, `~/Library/Logs/SmartumSwitch/smartum-switch.log` на macOS) содержит только счётчики и ошибки.
 
 ## Каталоги
 
@@ -62,6 +77,7 @@ Python 3 и systemd в таких системах обычно уже есть.
 | `core/` | общие правила (`RULES.md`), данные (`data/*.json`), словари hunspell, эталонное ядро на Python, тесты (`tests/cases.json`) |
 | `linux/` | версия для Linux/Wayland (Python, evdev + uinput, пользовательская служба systemd) — см. `linux/README.md` |
 | `windows/` | версия для Windows (C#/.NET 8, низкоуровневый хук + SendInput, значок в трее) — см. `windows/README.md` |
+| `macos/` | версия для macOS (Swift, `build.sh`, hunspell в `vendor/`) — см. `macos/README.md` |
 
 ## Тесты
 
@@ -118,7 +134,7 @@ Made at smARTum — furniture, Crimea.
 
 - **Linux (Wayland) is ready.** Tested on elementary OS 8 (Pantheon/Gala, layouts `us` + `ru`). A systemd user service uses evdev and uinput. See `linux/README.md`.
 - **Windows is a beta** (MVP 0.2, a single `SmartumSwitch-win-x64.exe` for Windows 10/11 x64). It has not yet been tested on real hardware. See `windows/README.md`.
-- **macOS is planned.** The shared core rules already name Linux, Windows and macOS (`core/RULES.md`); this release has no macOS tree.
+- **macOS 0.1.2** is an Intel (x86_64) app for macOS 13 and later. It is signed with a local self-signed certificate and is not notarized by Apple. Rosetta on Apple Silicon has not been tested. Install notes are in the Russian section; build notes are in `macos/README.md`.
 
 ### Quick start (Linux)
 
@@ -154,7 +170,7 @@ One-letter words are left alone. Two-letter words are fixed only when they are c
 
 ### Privacy
 
-No ads and no telemetry: typed text is never stored or sent. The log (`~/.cache/smartum-switch.log` on Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` on Windows) has counters and errors only.
+No ads and no telemetry: typed text is never stored or sent. The log (`~/.cache/smartum-switch.log` on Linux, `%LOCALAPPDATA%\SmartumSwitch\smartum-switch.log` on Windows, `~/Library/Logs/SmartumSwitch/smartum-switch.log` on macOS) has counters and errors only.
 
 ### Folders
 
@@ -163,6 +179,7 @@ No ads and no telemetry: typed text is never stored or sent. The log (`~/.cache/
 | `core/` | shared rules (`RULES.md`), data (`data/*.json`), hunspell dictionaries, the reference Python core, tests (`tests/cases.json`) |
 | `linux/` | Linux/Wayland version (Python, evdev + uinput, systemd user service) — see `linux/README.md` |
 | `windows/` | Windows version (C#/.NET 8, low-level hook + SendInput, tray) — see `windows/README.md` |
+| `macos/` | macOS version (Swift, `build.sh`, vendored hunspell) — see `macos/README.md` |
 
 ### Tests
 
