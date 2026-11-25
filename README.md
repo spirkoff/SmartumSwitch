@@ -17,14 +17,16 @@ SmartumSwitch автоматически исправляет слово, наб
 ## Состояние
 
 - **Linux (Wayland) готов.** Проверено на elementary OS 8 (Pantheon/Gala, раскладки `us` + `ru`). Служба пользователя systemd, evdev и uinput. Подробности: `linux/README.md`.
-- **Windows — бета** (MVP 0.2, один файл `SmartumSwitch-win-x64.exe` для Windows 10/11 x64). На реальном оборудовании ещё не проверялась. Подробности: `windows/README.md`.
+- **Windows 0.2.1 — предварительная версия** (установщик для Windows 10/11 x64). Проверка на реальных ПК продолжается. Подробности — в разделе ниже и в `windows/README.md`.
 - **macOS 0.1.2** — готовое приложение для Intel, macOS 13 и новее. На Apple Silicon через Rosetta не проверялось. Подробности — в разделе ниже и в `macos/README.md`.
 
 ## macOS
 
 Готовое приложение версии 0.1.2 для Intel (x86_64), macOS 13 и новее: [скачать](https://github.com/spirkoff/SmartumSwitch/releases/tag/macos-v0.1.2). Сборка для Intel; на Apple Silicon работа через Rosetta не проверялась. Подписано локальным самоподписанным сертификатом, Apple приложение не нотаризовала.
 
-Распакуйте архив и перенесите `SmartumSwitch.app` в «Программы». При первом запуске, так как приложение не нотаризовано, откройте его через правую кнопку → «Открыть» или «Системные настройки → Конфиденциальность и безопасность → Всё равно открыть».
+Откройте `SmartumSwitch-macos-0.1.2-intel.dmg`, перетащите SmartumSwitch в «Программы», извлеките образ и запустите приложение. Архив zip — запасной способ: распакуйте его и перенесите `SmartumSwitch.app` в «Программы».
+
+При первом запуске, так как приложение не нотаризовано, откройте его через правую кнопку → «Открыть» или «Системные настройки → Конфиденциальность и безопасность → Всё равно открыть».
 
 Нужны два разрешения: «Универсальный доступ» и «Мониторинг ввода». Нужны раскладки «Английская» (U.S. или ABC) и «Русская» (лучше «Русская — ПК»).
 
@@ -34,6 +36,14 @@ SmartumSwitch автоматически исправляет слово, наб
 Значок «S·» в строке меню означает, что автоисправление выключено или не выдано разрешение. Когда автоисправление работает, значок — «S».
 
 Сборка из исходников описана в `macos/README.md`.
+
+## Windows
+
+Предварительная версия 0.2.1 для Windows 10/11 x64: [скачать установщик](https://github.com/spirkoff/SmartumSwitch/releases/tag/windows-v0.2.1). Проверка на реальных ПК продолжается. Бесплатно, без рекламы, без телеметрии и без посторонних программ.
+
+Запустите `SmartumSwitch-win-x64-0.2.1-setup.exe`. Если SmartScreen покажет «Windows защитила ваш компьютер», нажмите «Подробнее» → «Выполнить в любом случае»: программа без платной подписи. Мастер на русском, права администратора не нужны. Программа ставится в `%LOCALAPPDATA%\Programs\SmartumSwitch`, ярлык появляется в «Пуск», в мастере есть флажок автозапуска, после установки значок в трее. Удаление: «Параметры → Приложения».
+
+Нужны раскладки «Английская (США)» и «Русская». **Pause** исправляет выделенное или последнее слово, **Shift+Pause** включает или выключает автоисправление. Скрипт установщика: `windows/installer/SmartumSwitch.nsi`. Подробности: `windows/README.md`.
 
 ## Быстрый старт (Linux)
 
@@ -56,7 +66,7 @@ git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linu
 
 Python 3 и systemd в таких системах обычно уже есть. Для горячей клавиши Pause на GNOME/Pantheon используется уже установленный `gsettings`. Отдельная программа вроде ydotool не нужна и не устанавливается: ввод идёт через `uinput`.
 
-Версия для Windows — один файл, без установщика и без прав администратора; посторонние программы она не ставит.
+Версия для Windows ставится своим установщиком без прав администратора и без посторонних программ. Подробности — в разделе «Windows».
 
 ## Клавиши
 
@@ -128,7 +138,7 @@ Made at smARTum — furniture, Crimea.
 ### Status
 
 - **Linux (Wayland) is ready.** Tested on elementary OS 8 (Pantheon/Gala, layouts `us` + `ru`). A systemd user service uses evdev and uinput. See `linux/README.md`.
-- **Windows is a beta** (MVP 0.2, a single `SmartumSwitch-win-x64.exe` for Windows 10/11 x64). It has not yet been tested on real hardware. See `windows/README.md`.
+- **Windows 0.2.1 is a prerelease** installer for Windows 10/11 x64. Testing on real PCs is still in progress. Install notes are in the Russian section; see also `windows/README.md`.
 - **macOS 0.1.2** is an Intel (x86_64) app for macOS 13 and later. It is signed with a local self-signed certificate and is not notarized by Apple. Rosetta on Apple Silicon has not been tested. Install notes are in the Russian section; build notes are in `macos/README.md`.
 
 ### Quick start (Linux)
@@ -153,7 +163,7 @@ The `linux/install.sh` installer adds only the packages the program needs to run
 
 Python 3 and systemd are usually already present. On GNOME/Pantheon the Pause hotkey uses `gsettings`, which is already installed. A separate tool such as ydotool is not required and is not installed: input goes through `uinput`.
 
-The Windows build is a single file: no installer, no administrator rights, and no bundled third-party software.
+The Windows build is installed by its own setup program: no administrator rights and no bundled third-party software. See the Russian section.
 
 ### Hotkeys
 
