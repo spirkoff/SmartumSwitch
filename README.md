@@ -47,13 +47,35 @@ SmartumSwitch автоматически исправляет слово, наб
 
 ## Быстрый старт (Linux)
 
+Установка одной командой (Ubuntu, Debian, elementary OS, Fedora, Arch, openSUSE; x86_64 и ARM64):
+
 ```bash
-git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/spirkoff/SmartumSwitch/main/linux/install.sh | bash
 ```
 
-Удаление: `git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./uninstall.sh`.
+Скрипт сам определяет дистрибутив и архитектуру, скачивает официальный релиз `v0.2.0` с GitHub, проверяет SHA-256 архива и файлов, ставит программу в `~/.local/bin/smartum-switch` без прав root и настраивает автозапуск (`systemd --user` или `~/.config/autostart`). Права `sudo` запрашиваются только если не хватает системных пакетов или правила udev (доступ к `/dev/uinput` и клавиатурам).
 
-Нужны раскладки `us` и `ru`. Установщик ставит пакеты, правило udev и пользовательскую службу `smartum-switch`. Запускайте его обычным пользователем.
+Вариант полностью без `sudo` (покажет команды для пакетов и udev вручную):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spirkoff/SmartumSwitch/main/linux/install.sh | bash -s -- --no-sudo
+```
+
+Удаление:
+
+```bash
+~/.local/share/smartum-switch/uninstall.sh
+```
+
+Или одной командой с GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spirkoff/SmartumSwitch/main/linux/uninstall.sh | bash
+```
+
+Чтобы удалить также настройки и кэш (`~/.config/smartum-switch`, `~/.cache/smartum-switch*`), добавьте `--purge`.
+
+Нужны раскладки `us` и `ru`.
 
 ## Зависимости (Linux)
 
@@ -148,13 +170,33 @@ Made at smARTum — furniture, Crimea.
 
 ### Quick start (Linux)
 
+One-command install (Ubuntu, Debian, elementary OS, Fedora, Arch, openSUSE; x86_64 and ARM64):
+
 ```bash
-git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/spirkoff/SmartumSwitch/main/linux/install.sh | bash
 ```
 
-Uninstall: `git clone https://github.com/spirkoff/SmartumSwitch.git && cd SmartumSwitch/linux && ./uninstall.sh`.
+The installer detects your distribution and architecture, downloads the official `v0.2.0` release from GitHub, verifies SHA-256 checksums, installs `smartum-switch` into `~/.local/bin` without root, and sets up autostart (`systemd --user` or `~/.config/autostart`). `sudo` is requested only if required system packages or the udev rule are missing.
 
-You need the `us` and `ru` layouts. The installer adds packages, a udev rule and the `smartum-switch` user service. Run it as your normal user.
+User-space only (never runs `sudo`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spirkoff/SmartumSwitch/main/linux/install.sh | bash -s -- --no-sudo
+```
+
+Uninstall:
+
+```bash
+~/.local/share/smartum-switch/uninstall.sh
+```
+
+Or via curl:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/spirkoff/SmartumSwitch/main/linux/uninstall.sh | bash
+```
+
+Add `--purge` to also remove `~/.config/smartum-switch` and cache files. You need the `us` and `ru` layouts.
 
 
 ### Dependencies (Linux)
