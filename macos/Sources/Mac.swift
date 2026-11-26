@@ -107,8 +107,32 @@ enum Layouts {
         return Character(sc)
     }
 
-    /// keycode -> index 0..33. Built from the real US layout (handles ISO keyboards), static table as fallback.
-    static func keyIndex() -> [Int: Int] {
+    static func activeRuSource() -> TISInputSource? {
+        if let s = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(), lang(s) == "ru" { return s }
+        return find("ru")
+    }
+
+    static func ruVariant(_ source: TISInputSource? = activeRuSource()) -> RuVariant {
+        guard let ru = source else { return .pc }
+        let rid = id(ru).lowercased()
+        // ID first: RussianWin is "Russian - PC". Do not use ISO/backslash keys (0x0A/0x2A):
+        // on ISO hardware RussianWin may also emit ё there, which is not Apple Russian.
+        if rid.contains("russianwin") || rid.contains("russian-pc") || rid.contains("russian_pc") { return .pc }
+        // Physical keys: grave is ё on Russian-PC and ] on Apple Russian; slash is . vs /.
+        if let grave = char(ru, 0x32, shift: false) {
+            if grave == "ё" || grave == "Ё" { return .pc }
+            if grave == "]" { return .mac }
+        }
+        if let slash = char(ru, 0x2C, shift: false) {
+            if slash == "." { return .pc }
+            if slash == "/" { return .mac }
+        }
+        if rid.contains("russian") { return .mac }
+        return .pc
+    }
+
+    /// keycode -> index 0..33 (plus 34 for Mac standard Russian `ё` on `0x2A`/`0x0A`).
+    static func keyIndex(ruVariant: RuVariant = ruVariant()) -> [Int: Int] {
         var m: [Int: Int] = [:]
         for (i, c) in Layout.macKeyCodes.enumerated() { m[c] = i }
         if let us = find("en") {
@@ -116,20 +140,27 @@ enum Layouts {
                 if let ch = char(us, code, shift: false), let i = Layout.enLower.firstIndex(of: ch) { m[code] = i }
             }
         }
+        if ruVariant == .mac {
+            let ru = activeRuSource()
+            let yoCode = (ru.flatMap { r in [0x2A, 0x0A].first { char(r, $0, shift: false) == "ё" } }) ?? Layout.macYoCode
+            m[yoCode] = Layout.macYoIdx
+        }
         return m
     }
 
-    /// `--layout-check`: compares the enabled layouts with core/data/layout.json. Returns mismatches.
+    /// `--layout-check`: compares the enabled layouts with expected PC or Apple Russian mapping. Returns mismatches.
     static func check() -> Int {
-        guard let en = find("en"), let ru = find("ru") else { print("нужны обе раскладки: английская и русская"); return 1 }
-        print("en: \(id(en))   ru: \(id(ru))   keyboard type: \(LMGetKbdType())")
+        guard let en = find("en"), let ru = activeRuSource() else { print("нужны обе раскладки: английская и русская"); return 1 }
+        let variant = ruVariant(ru)
+        print("en: \(id(en))   ru: \(id(ru)) (\(variant.rawValue))   keyboard type: \(LMGetKbdType())")
         var bad = 0
-        let idx = keyIndex()
+        let idx = keyIndex(ruVariant: variant)
         for (code, i) in idx.sorted(by: { $0.value < $1.value }) {
             for shift in [false, true] {
                 let e = char(en, code, shift: shift), r = char(ru, code, shift: shift)
-                let ee = shift ? Layout.enUpper[i] : Layout.enLower[i], rr = shift ? Layout.ruUpper[i] : Layout.ruLower[i]
-                let quirk = i == 0 && shift && r == "\u{00CB}"
+                let ee = Layout.char(idx: i, shift: shift, lay: "en", caps: false, ruVariant: variant)
+                let rr = Layout.char(idx: i, shift: shift, lay: "ru", caps: false, ruVariant: variant)
+                let quirk = (i == 0 || i == Layout.macYoIdx) && shift && r == "\u{00CB}"
                 let ok = e == ee && (r == rr || quirk)
                 if !ok { bad += 1 }
                 let tag = quirk ? "ok (macOS U+00CB -> Ё)" : (ok ? "ok" : "MISMATCH")

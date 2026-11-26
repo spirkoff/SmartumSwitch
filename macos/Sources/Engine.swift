@@ -28,21 +28,33 @@ final class Engine {
     private let lock = NSRecursiveLock()
     private let queue = DispatchQueue(label: "SmartumSwitch.worker")
     private var keyIndex: [Int: Int] = [:]
+    private var ruVariant: RuVariant = .pc
+    private var activeRuId: String = ""
     private var word: [Key] = []
     private var dirty = false, busy = false
     private var wordPid: pid_t = 0
     private var wordLayout: String?
-    private var last: (keys: [Key], layout: String, pid: pid_t)?
+    private var wordRuVariant: RuVariant = .pc
+    private var last: (keys: [Key], layout: String, pid: pid_t, ruVariant: RuVariant)?
     private var held: [CGEvent] = []
     private var swallowUp = Set<Int>()
     private var sessionIgnore = Set<String>()
     private(set) var stats: [String: Int] = [:]
 
     func setup() {
-        keyIndex = Layouts.keyIndex()
+        refreshRuLayout(force: true)
         let r = Res.json("rules.json")
         blockApps = (r["block_apps_macos"] as? [String]) ?? []
         blockTitles = (r["block_titles"] as? [String]) ?? []
+    }
+
+    private func refreshRuLayout(force: Bool = false) {
+        let src = Layouts.activeRuSource()
+        let rid = src.map { Layouts.id($0) } ?? ""
+        if !force && rid == activeRuId { return }
+        activeRuId = rid
+        ruVariant = Layouts.ruVariant(src)
+        keyIndex = Layouts.keyIndex(ruVariant: ruVariant)
     }
 
     func count(_ k: String) { lock.lock(); stats[k, default: 0] += 1; lock.unlock() }
@@ -134,8 +146,10 @@ final class Engine {
         }
         if let idx = keyIndex[code] {
             if word.isEmpty {
+                refreshRuLayout()
                 wordPid = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
                 wordLayout = Layouts.layout(of: event) ?? Layouts.current()
+                wordRuVariant = ruVariant
                 if wordLayout == nil { stats["no_layout", default: 0] += 1 }
             }
             word.append(Key(idx: idx, shift: shift, code: code, flags: flags.intersection([.maskShift, .maskAlphaShift])))
@@ -162,15 +176,15 @@ final class Engine {
         guard let L = wordLayout else { count("skip_layout"); Log.write("skip layout=nil bundle=\(bid) letters=\(word.count)"); return false }
         guard let j = judge else { count("skip_judge"); return false }
         if pid != wordPid { count("skip_focus"); Log.write("skip focus bundle=\(bid)"); return false }
-        let O = Layout.other(L), keys = word
+        let O = Layout.other(L), keys = word, rv = wordRuVariant
         if Layouts.find(O) == nil { count("skip_no_other"); return false }
         if sessionIgnore.contains(Engine.sig(keys)) { count("skip_ignored"); return false }
-        let r = j.shouldFix(Engine.render(keys, L, caps), Engine.render(keys, O, caps), L, O)
+        let r = j.shouldFix(Engine.render(keys, L, caps, ruVariant: rv), Engine.render(keys, O, caps, ruVariant: rv), L, O)
         stats["checked", default: 0] += 1
         if r.fix {
             busy = true
             Log.write("fix \(r.why) layout=\(L)->\(O) bundle=\(bid) letters=\(keys.count)")
-            queue.async { self.fix(keys, L, O, pid, r.why, caps, terminator: terminator) }
+            queue.async { self.fix(keys, L, O, pid, r.why, caps, ruVariant: rv, terminator: terminator) }
             return true
         }
         count("keep_" + r.why)
@@ -178,8 +192,8 @@ final class Engine {
     }
 
     static func sig(_ keys: [Key]) -> String { keys.map { String($0.idx) }.joined(separator: ",") }
-    static func render(_ keys: [Key], _ lay: String, _ caps: Bool) -> String {
-        Layout.render(keys.map { (idx: $0.idx, shift: $0.shift) }, lay, caps: caps)
+    static func render(_ keys: [Key], _ lay: String, _ caps: Bool, ruVariant: RuVariant = .pc) -> String {
+        Layout.render(keys.map { (idx: $0.idx, shift: $0.shift) }, lay, caps: caps, ruVariant: ruVariant)
     }
 
     // ---------------- environment ----------------
@@ -195,30 +209,30 @@ final class Engine {
     }
 
     // ---------------- jobs (worker queue) ----------------
-    private func retype(_ keys: [Key], _ lay: String, _ caps: Bool) {
+    private func retype(_ keys: [Key], _ lay: String, _ caps: Bool, ruVariant: RuVariant = .pc) {
         if replayKeys { for k in keys { Input.tap(k.code, flags: k.flags) }; return }
-        let text = Array(Engine.render(keys, lay, caps))
+        let text = Array(Engine.render(keys, lay, caps, ruVariant: ruVariant))
         for (i, k) in keys.enumerated() { Input.type(text[i], code: k.code) }
     }
 
-    private func fix(_ keys: [Key], _ L: String, _ O: String, _ pid: pid_t, _ why: String, _ caps: Bool, terminator: Int = KC.space) {
+    private func fix(_ keys: [Key], _ L: String, _ O: String, _ pid: pid_t, _ why: String, _ caps: Bool, ruVariant: RuVariant = .pc, terminator: Int = KC.space) {
         defer { flushHeld() }
         if !envOk(pid) { Input.tap(terminator); return }
         for _ in keys { Input.tap(KC.delete) }
         let switched = onMain { Layouts.select(O) }
         usleep(switchDelay)
-        retype(keys, switched ? O : L, caps)   // if switching failed this simply restores the original text
+        retype(keys, switched ? O : L, caps, ruVariant: ruVariant)   // if switching failed this simply restores the original text
         Input.tap(terminator)
-        if switched { lock.lock(); last = (keys, L, pid); lock.unlock(); count("fixed_" + why) } else { count("error_layout") }
+        if switched { lock.lock(); last = (keys, L, pid, ruVariant); lock.unlock(); count("fixed_" + why) } else { count("error_layout") }
     }
 
-    private func rollback(_ l: (keys: [Key], layout: String, pid: pid_t)) {
+    private func rollback(_ l: (keys: [Key], layout: String, pid: pid_t, ruVariant: RuVariant)) {
         defer { flushHeld() }
         if !envOk(l.pid) { Input.tap(KC.delete); return }
         for _ in 0...l.keys.count { Input.tap(KC.delete) }
         onMain { Layouts.select(l.layout) }
         usleep(switchDelay)
-        retype(l.keys, l.layout, l.keys.first?.flags.contains(.maskAlphaShift) ?? false)
+        retype(l.keys, l.layout, l.keys.first?.flags.contains(.maskAlphaShift) ?? false, ruVariant: l.ruVariant)
         Input.tap(KC.space)
         lock.lock(); sessionIgnore.insert(Engine.sig(l.keys)); lock.unlock()
         count("rollback")
